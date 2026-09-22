@@ -1,0 +1,23 @@
+{
+  "//": "Reglas desactivadas SOLO donde el diagnostico es correcto pero la decision es deliberada. Cada override dice por que. Todo lo demas se arregla en el codigo.",
+  "ignore": {
+    "files": ["__tests__/**", "coverage/**", ".next/**"],
+    "overrides": [
+      {
+        "//": "El proxy ya corta por sesion del lado del servidor. Estos dos redirects dependen de estado que solo existe en el cliente: el app_user de cajero (vive detras de RLS, lo carga AuthContext) y una ficha de cliente que la base no devolvio. Un redirect de servidor no puede saber ninguna de las dos cosas.",
+        "files": ["src/app/**/layout.tsx", "src/app/**/new-sale/page.tsx"],
+        "rules": ["react-doctor/nextjs-no-client-side-redirect"]
+      },
+      {
+        "//": "Nueva Venta es una pantalla de un solo campo en una caja registradora: el cajero llega para tipear el monto y nada mas. El autofocus le ahorra un toque por venta y no hay otro control con el que compita.",
+        "files": ["src/app/**/new-sale/page.tsx"],
+        "rules": ["react-doctor/no-autofocus"]
+      },
+      {
+        "//": "El equivalente en HTML seria <progress>, que dibuja una barra de progreso determinada. Aca no hay progreso que informar: es el ActivityIndicator de la app movil, un circulo girando, y role=progressbar es la forma accesible de anunciarlo.",
+        "files": ["src/components/ui/spinner.tsx"],
+        "rules": ["react-doctor/prefer-tag-over-role"]
+      }
+    ]
+  }
+}

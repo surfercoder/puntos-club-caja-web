@@ -1,0 +1,117 @@
+@import "tailwindcss";
+
+/* Paleta muestreada pixel a pixel de los mockups de cajero (19/08/2026).
+   Espejo exacto de PuntosClubCaja/constants/theme.ts — si cambia uno, cambia
+   el otro: los dos se usan (clases de Tailwind aca, `colors` en JS para los
+   iconos y los gradientes que no se pueden expresar con una clase). */
+@theme {
+  --color-bg: #FBFBFC;
+  --color-card: #FFFFFF;
+
+  --color-green: #02875B;
+  --color-green-card: #059366;
+  --color-green-bright: #099149;
+  --color-green-soft: #D7F1E4;
+  --color-green-tint: #ECF8F2;
+  --color-green-line: #BEE7D3;
+  --color-green-field: #CBE0D5;
+  --color-green-ink: #07814A;
+
+  --color-orange: #D97706;
+  --color-orange-soft: #FEF3E7;
+  --color-orange-tint: #FDF3E6;
+  --color-orange-line: #F5CFA0;
+  --color-orange-ink: #92400E;
+
+  --color-danger: #DC2626;
+  --color-danger-soft: #FDE9E9;
+  --color-danger-line: #F0A7A7;
+
+  --color-ink: #111827;
+  --color-ink-soft: #374151;
+  --color-muted: #6B7280;
+  --color-subtle: #9CA3AF;
+  --color-line: #E5E7EB;
+  --color-line-soft: #F3F4F6;
+  --color-disabled: #F3F4F6;
+
+  --color-auth-bg: #F9FCFB;
+
+  /* React Native usa la fuente del sistema; la web la copia para que los
+     anchos de texto del mockup no se corran. */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+
+  /* Sombra suave de las tarjetas del mockup (cardShadow en theme.ts). */
+  --shadow-card: 0px 1px 3px rgba(16, 24, 40, 0.06);
+}
+
+/* La app movil no tiene modo oscuro: las tres pantallas se disenaron sobre
+   fondo claro. Se fija el esquema para que el navegador no invierta los
+   controles nativos (inputs, checkbox, scrollbar). */
+:root {
+  color-scheme: light;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* El movil no muestra barra de scroll sobre el contenido
+   (showsVerticalScrollIndicator={false} en casi todas las pantallas). */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Columna de contenido. En un telefono ocupa todo el ancho, identica a la app;
+   en una ventana grande se centra y para de crecer. El minmax(0, …) hace las
+   dos cosas sin un media query: si hay menos lugar que --page-w, la columna
+   vale lo que haya.
+   Se aplica al contenedor que scrollea de cada pantalla y a la fila interna de
+   la barra superior, para que el color de la barra siga yendo a sangre y solo
+   el contenido quede centrado. */
+.page-column {
+  display: grid;
+  grid-template-columns: minmax(0, var(--page-w, 1120px));
+  justify-content: center;
+  /* Sin esto las filas se estiran para llenar una ventana alta y vacia. */
+  align-content: start;
+}
+
+/* Centra el contenido a lo alto cuando sobra pantalla (el login en una ventana
+   de escritorio). El `safe` es lo que hace que sirva: si el contenido no entra
+   — un telefono apaisado, o el navegador con el zoom al 200% — vuelve solo a
+   alinear arriba, en vez de recortar la parte de arriba sin dejar scrollear. */
+.page-center {
+  align-content: safe center;
+}
+
+/* Formularios y pantallas de lectura no se leen bien a 1120px: una linea de
+   texto de ese ancho obliga a barrer la cabeza de punta a punta. */
+.page-form {
+  --page-w: 560px;
+}
+.page-read {
+  --page-w: 760px;
+}
+
+/* Pressable de RN: opacidad al tocar. Se aplica tambien en :active para que el
+   feedback exista en tactil, donde no hay hover. */
+.pressable {
+  transition: opacity 120ms ease;
+}
+.pressable:active {
+  opacity: 0.75;
+}
