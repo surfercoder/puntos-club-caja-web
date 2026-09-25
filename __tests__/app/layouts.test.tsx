@@ -7,10 +7,14 @@ jest.mock('next/navigation', () => ({
   useRouter: () => router,
 }));
 
+const signOut = jest.fn().mockResolvedValue(undefined);
 const auth = {
   session: null as unknown,
   appUser: null as unknown,
   loading: false,
+  // El tipo es la firma, no el mock: los tests que imitan al provider le
+  // asignan una funcion nueva para rearmar la identidad de `signOut`.
+  signOut: signOut as () => Promise<void>,
 };
 jest.mock('@/contexts/AuthContext', () => ({
   useAuth: () => auth,
@@ -22,7 +26,12 @@ import NotFound from '@/app/not-found';
 
 beforeEach(() => {
   jest.clearAllMocks();
-  Object.assign(auth, { session: null, appUser: null, loading: false });
+  Object.assign(auth, {
+    session: null,
+    appUser: null,
+    loading: false,
+    signOut,
+  });
 });
 
 describe('guardia de (app)', () => {
@@ -39,10 +48,26 @@ describe('guardia de (app)', () => {
     expect(screen.queryByText('contenido')).not.toBeInTheDocument();
   });
 
-  it('con sesion pero sin app_user de caja tambien manda al login', async () => {
+  // Con la cookie todavia viva el proxy rebota /sign-in a /: sin cerrar sesion
+  // primero, el cajero queda dando vueltas contra el spinner.
+  it('con sesion pero sin app_user de caja cierra sesion y manda al login', async () => {
     auth.session = { user: { id: 'a' } };
     render(<AppLayout>contenido</AppLayout>);
     await waitFor(() => expect(replace).toHaveBeenCalledWith('/sign-in'));
+    expect(signOut).toHaveBeenCalledTimes(1);
+  });
+
+  // El provider rearma `signOut` en cada render, asi que el efecto se repite:
+  // no tiene que disparar un segundo cierre de sesion. El wrapper imita ese
+  // cambio de identidad — con la misma funcion el efecto no se volveria a
+  // correr y el test pasaria incluso sin el flag que lo corta.
+  it('no repite el cierre de sesion si el layout se vuelve a renderizar', async () => {
+    auth.session = { user: { id: 'a' } };
+    const { rerender } = render(<AppLayout>contenido</AppLayout>);
+    await waitFor(() => expect(signOut).toHaveBeenCalledTimes(1));
+    auth.signOut = () => signOut();
+    rerender(<AppLayout>contenido</AppLayout>);
+    expect(signOut).toHaveBeenCalledTimes(1);
   });
 
   it('con cajero valido deja pasar', () => {

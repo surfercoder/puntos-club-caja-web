@@ -17,6 +17,7 @@ import { notify } from '@/lib/notify';
 import { useAuth } from '@/contexts/AuthContext';
 import { useT } from '@/contexts/I18nContext';
 import { APP_VERSION } from '@/lib/app-version';
+import { ADMIN_URL } from '@/lib/env';
 import { errorMessage } from '@/lib/errors';
 import { SUPPORT_EMAIL } from '@/lib/support';
 import { supabase } from '@/lib/supabase/client';
@@ -85,7 +86,7 @@ export default function SignInPage() {
       return;
     }
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/update-password`,
+      redirectTo: `${ADMIN_URL}/auth/update-password`,
     });
     // El rate limit de GoTrue ("you can only request this after 60 seconds")
     // sale traducido y con los segundos.

@@ -18,3 +18,10 @@ export const env = envSchema.parse({
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
   NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
 });
+
+// Base del admin para los links que van por mail (recuperar contrasena). A
+// diferencia de notifyAdmin, aca la ausencia no puede significar "no hagas
+// nada": el mail se manda igual y sin base sale un `undefined/auth/...` que no
+// abre nada. Sale de `env` y no de process.env para no saltearse la validacion.
+export const ADMIN_URL =
+  env.NEXT_PUBLIC_SITE_URL ?? 'https://puntos-club-admin.vercel.app';

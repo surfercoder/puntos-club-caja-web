@@ -10,25 +10,27 @@ const loadEnv = async (siteUrl: string | undefined) => {
   });
 
   process.env.NEXT_PUBLIC_SITE_URL = previous;
-  return loaded.env;
+  return loaded;
 };
 
 describe('validacion del entorno', () => {
   it('acepta una url de admin valida', async () => {
-    const env = await loadEnv('https://admin.puntosclub.com.ar');
+    const { env, ADMIN_URL } = await loadEnv('https://admin.puntosclub.com.ar');
     expect(env.NEXT_PUBLIC_SITE_URL).toBe('https://admin.puntosclub.com.ar');
+    expect(ADMIN_URL).toBe('https://admin.puntosclub.com.ar');
   });
 
   it('trata la cadena vacia como ausente, en vez de fallar por "no es una url"', async () => {
-    await expect(loadEnv('')).resolves.toMatchObject({
-      NEXT_PUBLIC_SITE_URL: undefined,
-    });
+    const { env } = await loadEnv('');
+    expect(env.NEXT_PUBLIC_SITE_URL).toBeUndefined();
   });
 
-  it('la variable es opcional', async () => {
-    await expect(loadEnv(undefined)).resolves.toMatchObject({
-      NEXT_PUBLIC_SITE_URL: undefined,
-    });
+  // El mail de recuperar contrasena se manda igual sin la variable: el link
+  // tiene que apuntar a algun lado, no a `undefined/auth/update-password`.
+  it('sin la variable, ADMIN_URL cae en la base de produccion', async () => {
+    const { env, ADMIN_URL } = await loadEnv(undefined);
+    expect(env.NEXT_PUBLIC_SITE_URL).toBeUndefined();
+    expect(ADMIN_URL).toBe('https://puntos-club-admin.vercel.app');
   });
 
   it('el build falla de entrada si falta Supabase, en vez de romper en runtime', async () => {

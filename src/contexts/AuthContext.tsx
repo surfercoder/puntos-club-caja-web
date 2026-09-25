@@ -103,9 +103,10 @@ async function signInImpl(
 async function fetchAppUserByAuthUserId(
   authUserId: string,
 ): Promise<{ appUser: AppUserWithOrg | null; signedOut: boolean }> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => {
+      timer = setTimeout(() => {
         reject(new Error('fetchAppUser timeout'));
       }, 8000);
     });
@@ -116,7 +117,14 @@ async function fetchAppUserByAuthUserId(
       .eq('auth_user_id', authUserId)
       .single();
 
-    const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
+    // El timer del race hay que apagarlo cuando gana la query: si no, a los 8s
+    // rechaza una promesa que ya no tiene a nadie escuchando. Va en un
+    // `.finally` de la promesa y no en uno del try, que corre igual pero deja
+    // una rama que ningun test puede alcanzar.
+    const { data, error } = await Promise.race([
+      queryPromise,
+      timeoutPromise,
+    ]).finally(() => clearTimeout(timer));
 
     if (error || !data) {
       await supabase.auth.signOut();
