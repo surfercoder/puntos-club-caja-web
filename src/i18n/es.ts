@@ -104,7 +104,6 @@ export const es = {
   'signIn.helpSubtitle': 'Escribinos a soporte@puntosclub.com.ar',
   'signIn.helpSubject': 'Ayuda para entrar a PuntosClub Caja',
   'signIn.missingFields': 'Por favor completá todos los campos.',
-  'signIn.comingSoon': 'Próximamente',
 
   'biometric.title': 'Huella digital',
   'biometric.offer': '¿Querés usar tu huella para ingresar la próxima vez?',

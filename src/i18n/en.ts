@@ -106,7 +106,6 @@ export const en: Record<keyof typeof es, string> = {
   'signIn.helpSubtitle': 'Write to us at soporte@puntosclub.com.ar',
   'signIn.helpSubject': 'Help signing in to PuntosClub Caja',
   'signIn.missingFields': 'Please fill in every field.',
-  'signIn.comingSoon': 'Coming soon',
 
   'biometric.title': 'Fingerprint',
   'biometric.offer': 'Do you want to use your fingerprint to sign in next time?',
