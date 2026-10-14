@@ -82,6 +82,8 @@ export const es = {
   'error.rpc.insufficientPoints': 'El cliente no tiene puntos suficientes.',
   'error.rpc.notPending': 'Este canje ya no está pendiente.',
   'error.rpc.redemptionNotFound': 'No encontramos ese canje.',
+  'error.rpc.planLimitReached':
+    'El club alcanzó el límite de clientes de su plan. El dueño tiene que mejorarlo desde el admin.',
   'error.rpc.membershipInactive':
     'Este cliente ya no es socio del club. Agregalo de nuevo antes de cargarle puntos.',
 

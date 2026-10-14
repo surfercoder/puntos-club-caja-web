@@ -84,6 +84,8 @@ export const en: Record<keyof typeof es, string> = {
   'error.rpc.insufficientPoints': "The customer doesn't have enough points.",
   'error.rpc.notPending': 'This redemption is no longer pending.',
   'error.rpc.redemptionNotFound': "We couldn't find that redemption.",
+  'error.rpc.planLimitReached':
+    'The club has reached the customer limit of its plan. The owner needs to upgrade it from the admin.',
   'error.rpc.membershipInactive':
     'This customer is no longer a club member. Add them again before awarding points.',
 

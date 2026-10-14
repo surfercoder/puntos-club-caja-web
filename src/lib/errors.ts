@@ -61,6 +61,7 @@ const RPC_TOKENS: [string, MessageKey][] = [
   ['REDEMPTION_NOT_PENDING', 'error.rpc.notPending'],
   ['REDEMPTION_NOT_FOUND', 'error.rpc.redemptionNotFound'],
   ['MEMBERSHIP_INACTIVE', 'error.rpc.membershipInactive'],
+  ['PLAN_LIMIT_REACHED', 'error.rpc.planLimitReached'],
 ];
 
 const asRecord = (error: unknown) =>

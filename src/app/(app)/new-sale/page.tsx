@@ -657,7 +657,9 @@ function useSaleSubmission({
       const { key } = errorDescriptor(purchaseError);
       notify.error(t('common.error'), {
         description: t(
-          key === 'error.rpc.membershipInactive' ? key : 'sale.registerFailed',
+          key === 'error.rpc.membershipInactive' || key === 'error.rpc.planLimitReached'
+            ? key
+            : 'sale.registerFailed',
         ),
       });
       dispatch({ type: 'confirm/close' });

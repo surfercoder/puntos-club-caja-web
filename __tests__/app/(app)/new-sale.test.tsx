@@ -188,8 +188,11 @@ describe('registrar', () => {
     expect(db.tables).not.toContain('purchase');
   });
 
-  it('si el cliente dejo de seguir al club, el error lo dice', async () => {
-    db.queueTable('purchase', { data: null, error: { message: 'MEMBERSHIP_INACTIVE' } });
+  it.each([
+    ['el cliente dejo de seguir al club', 'MEMBERSHIP_INACTIVE', 'error.rpc.membershipInactive'],
+    ['el club llego al limite de su plan', 'PLAN_LIMIT_REACHED', 'error.rpc.planLimitReached'],
+  ] as const)('si %s, el error lo dice', async (_caso, token, key) => {
+    db.queueTable('purchase', { data: null, error: { message: token } });
     await cargarMonto('100');
     await userEvent.click(submit());
     await userEvent.click(await screen.findByRole('button', { name: es('sale.confirmAction') }));
@@ -197,7 +200,7 @@ describe('registrar', () => {
     await waitFor(() =>
       expect(notify.error).toHaveBeenCalledWith(
         es('common.error'),
-        expect.objectContaining({ description: es('error.rpc.membershipInactive') }),
+        expect.objectContaining({ description: es(key) }),
       ),
     );
   });
