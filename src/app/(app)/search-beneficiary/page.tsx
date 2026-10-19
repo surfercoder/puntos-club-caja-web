@@ -85,7 +85,7 @@ export default function SearchBeneficiaryPage() {
         className="page-column page-form no-scrollbar flex-1 overflow-y-auto px-5 pb-[calc(20px+env(safe-area-inset-bottom))] pt-2"
       >
         <Image
-          src="/images/search/mascot.png"
+          src="/images/search/mascot-v2.png"
           alt=""
           width={390}
           height={236}

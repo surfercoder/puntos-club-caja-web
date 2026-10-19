@@ -353,7 +353,7 @@ function HomeHero({
           {/* El fondo del PNG esta pintado con greenCard exacto, asi que la
               mascota se funde con la tarjeta: se apoya en el borde, sin margen. */}
           <Image
-            src="/images/home/mascot.png"
+            src="/images/home/mascot-v2.png"
             alt=""
             width={118}
             height={152}

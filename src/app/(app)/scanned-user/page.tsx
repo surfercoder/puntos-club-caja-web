@@ -483,7 +483,7 @@ function ScannedUserScreen() {
         {/* ponytail: se reusa la mascota de "Buscar Cliente" (misma pose, lupa
             con QR en vez de vacia) en lugar de pedir un PNG nuevo. */}
         <Image
-          src="/images/search/mascot.png"
+          src="/images/search/mascot-v2.png"
           alt=""
           width={390}
           height={220}
