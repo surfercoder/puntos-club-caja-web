@@ -41,7 +41,7 @@ describe('layout raiz', () => {
 
 describe('metadata', () => {
   it('declara el titulo de la app', () => {
-    expect(metadata.title).toBe('PuntosClub Caja');
+    expect(metadata.title).toBe('Puntos Club Caja');
   });
 
   it('pinta la barra del navegador del mismo verde que el header', () => {

@@ -9,7 +9,7 @@ export default function NotFound() {
         href="/"
         className="pressable rounded-xl bg-green-card px-6 py-3 text-[16px] font-semibold text-white"
       >
-        PuntosClub Caja
+        Puntos Club Caja
       </Link>
     </div>
   );

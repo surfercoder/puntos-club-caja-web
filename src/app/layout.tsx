@@ -10,8 +10,8 @@ import { LANG_COOKIE, readLangCookie } from '@/i18n/cookie';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'PuntosClub Caja',
-  description: 'Caja de PuntosClub: ventas, entregas y reglas de puntos.',
+  title: 'Puntos Club Caja',
+  description: 'Caja de Puntos Club: ventas, entregas y reglas de puntos.',
 };
 
 export const viewport: Viewport = {

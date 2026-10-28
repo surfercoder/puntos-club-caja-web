@@ -90,6 +90,6 @@ describe('404', () => {
   it('ofrece volver a la home', () => {
     render(<NotFound />);
     expect(screen.getByText('404')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'PuntosClub Caja' })).toHaveAttribute('href', '/');
+    expect(screen.getByRole('link', { name: 'Puntos Club Caja' })).toHaveAttribute('href', '/');
   });
 });

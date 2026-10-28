@@ -1,4 +1,9 @@
 @import "tailwindcss";
+@import "@fontsource/poppins/400.css";
+@import "@fontsource/poppins/500.css";
+@import "@fontsource/poppins/600.css";
+@import "@fontsource/poppins/700.css";
+@import "@fontsource/poppins/800.css";
 
 /* Paleta muestreada pixel a pixel de los mockups de cajero (19/08/2026).
    Espejo exacto de PuntosClubCaja/constants/theme.ts — si cambia uno, cambia
@@ -37,9 +42,8 @@
 
   --color-auth-bg: #F9FCFB;
 
-  /* React Native usa la fuente del sistema; la web la copia para que los
-     anchos de texto del mockup no se corran. */
-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+  /* Poppins como las apps (components/Text.tsx) y el admin. */
+  --font-sans: "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, sans-serif;
 
   /* Sombra suave de las tarjetas del mockup (cardShadow en theme.ts). */

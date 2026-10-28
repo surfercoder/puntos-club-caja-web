@@ -90,7 +90,7 @@ export const en: Record<keyof typeof es, string> = {
     'This customer is no longer a club member. Add them again before awarding points.',
 
   // --- Sign in -------------------------------------------------------------
-  'signIn.title': 'PuntosClub Caja',
+  'signIn.title': 'Puntos Club Caja',
   'signIn.subtitle': 'Award points, build loyalty',
   'signIn.email': 'Email',
   'signIn.emailPlaceholder': 'you@email.com',
@@ -106,7 +106,7 @@ export const en: Record<keyof typeof es, string> = {
   'signIn.biometricPill': 'Fast and secure',
   'signIn.helpTitle': 'Need help?',
   'signIn.helpSubtitle': 'Write to us at soporte@puntosclub.com.ar',
-  'signIn.helpSubject': 'Help signing in to PuntosClub Caja',
+  'signIn.helpSubject': 'Help signing in to Puntos Club Caja',
   'signIn.missingFields': 'Please fill in every field.',
 
   'biometric.title': 'Fingerprint',
@@ -122,7 +122,7 @@ export const en: Record<keyof typeof es, string> = {
   'forgot.sent': 'We sent you an email with a link to create a new password.',
 
   // --- Home ----------------------------------------------------------------
-  'home.title': 'PuntosClub Caja',
+  'home.title': 'Puntos Club Caja',
   'home.greeting': 'Hi, {name}! 👋',
   'home.greetingSub': 'Ready to award points today.',
   'home.organizationLabel': 'ORGANIZATION',
@@ -214,7 +214,7 @@ export const en: Record<keyof typeof es, string> = {
   'search.scanSubtitle': "Scan the customer's QR code",
   'search.hintTitle': "Where's the QR code?",
   'search.hintSubtitle':
-    'Customers find their QR code in the PuntosClub app, on their profile.',
+    'Customers find their QR code in the Puntos Club app, on their profile.',
   'search.requiredTitle': 'Field required',
   'search.requiredEmail': 'Please enter an email to search.',
   'search.requiredDni': 'Please enter an ID number to search.',

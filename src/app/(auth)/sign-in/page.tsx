@@ -229,7 +229,7 @@ export default function SignInPage() {
         {/* Antes de entrar no se puede saber a que organizacion pertenece
             quien mira esta pantalla: get_my_owner_email() resuelve todo desde
             auth.uid(), que todavia es null. Y a quien no puede entrar lo tiene
-            que atender PuntosClub igual — el owner tampoco le puede resetear
+            que atender Puntos Club igual — el owner tampoco le puede resetear
             la contrasena, eso lo hace GoTrue. Por eso va al soporte nuestro.
             El mail del owner sigue estando en la home, ya con sesion. */}
         <a
@@ -251,7 +251,7 @@ export default function SignInPage() {
         </a>
 
         <p className="mt-[22px] text-center text-[12px] text-subtle">
-          PuntosClub Caja {APP_VERSION}
+          Puntos Club Caja {APP_VERSION}
         </p>
       </form>
     </div>

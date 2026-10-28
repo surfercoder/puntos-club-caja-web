@@ -276,7 +276,7 @@ export default function ProfilePage() {
         </button>
 
         <p className="mt-[22px] text-center text-[12px] text-subtle">
-          PuntosClub Caja {APP_VERSION}
+          Puntos Club Caja {APP_VERSION}
         </p>
       </form>
     </div>

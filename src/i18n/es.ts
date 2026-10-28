@@ -88,7 +88,7 @@ export const es = {
     'Este cliente ya no es socio del club. Agregalo de nuevo antes de cargarle puntos.',
 
   // --- Ingreso -------------------------------------------------------------
-  'signIn.title': 'PuntosClub Caja',
+  'signIn.title': 'Puntos Club Caja',
   'signIn.subtitle': 'Asigná puntos, creá lealtad',
   'signIn.email': 'Email',
   'signIn.emailPlaceholder': 'tu@email.com',
@@ -104,7 +104,7 @@ export const es = {
   'signIn.biometricPill': 'Rápido y seguro',
   'signIn.helpTitle': '¿Necesitás ayuda?',
   'signIn.helpSubtitle': 'Escribinos a soporte@puntosclub.com.ar',
-  'signIn.helpSubject': 'Ayuda para entrar a PuntosClub Caja',
+  'signIn.helpSubject': 'Ayuda para entrar a Puntos Club Caja',
   'signIn.missingFields': 'Por favor completá todos los campos.',
 
   'biometric.title': 'Huella digital',
@@ -121,7 +121,7 @@ export const es = {
     'Te enviamos un email con el link para crear una nueva contraseña.',
 
   // --- Inicio --------------------------------------------------------------
-  'home.title': 'PuntosClub Caja',
+  'home.title': 'Puntos Club Caja',
   'home.greeting': '¡Hola, {name}! 👋',
   'home.greetingSub': 'Listo para asignar puntos hoy.',
   'home.organizationLabel': 'ORGANIZACIÓN',
@@ -215,7 +215,7 @@ export const es = {
   'search.scanSubtitle': 'Escanear QR del cliente',
   'search.hintTitle': '¿Dónde está el QR?',
   'search.hintSubtitle':
-    'El cliente encuentra su QR en la app PuntosClub, en su perfil.',
+    'El cliente encuentra su QR en la app Puntos Club, en su perfil.',
   'search.requiredTitle': 'Campo requerido',
   'search.requiredEmail': 'Por favor ingresá un email para buscar.',
   'search.requiredDni': 'Por favor ingresá un DNI para buscar.',

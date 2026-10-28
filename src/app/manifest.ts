@@ -4,9 +4,9 @@ import type { MetadataRoute } from 'next';
 // el APK igual termina con un icono y una ventana sin barra de navegador.
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'PuntosClub Caja',
+    name: 'Puntos Club Caja',
     short_name: 'Caja',
-    description: 'Caja de PuntosClub: ventas, entregas y reglas de puntos.',
+    description: 'Caja de Puntos Club: ventas, entregas y reglas de puntos.',
     start_url: '/',
     display: 'standalone',
     background_color: '#FBFBFC',
