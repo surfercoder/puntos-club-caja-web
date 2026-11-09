@@ -15,9 +15,9 @@ const loadEnv = async (siteUrl: string | undefined) => {
 
 describe('validacion del entorno', () => {
   it('acepta una url de admin valida', async () => {
-    const { env, ADMIN_URL } = await loadEnv('https://admin.puntosclub.com.ar');
-    expect(env.NEXT_PUBLIC_SITE_URL).toBe('https://admin.puntosclub.com.ar');
-    expect(ADMIN_URL).toBe('https://admin.puntosclub.com.ar');
+    const { env, ADMIN_URL } = await loadEnv('https://admin.example.com');
+    expect(env.NEXT_PUBLIC_SITE_URL).toBe('https://admin.example.com');
+    expect(ADMIN_URL).toBe('https://admin.example.com');
   });
 
   it('trata la cadena vacia como ausente, en vez de fallar por "no es una url"', async () => {
@@ -30,7 +30,7 @@ describe('validacion del entorno', () => {
   it('sin la variable, ADMIN_URL cae en la base de produccion', async () => {
     const { env, ADMIN_URL } = await loadEnv(undefined);
     expect(env.NEXT_PUBLIC_SITE_URL).toBeUndefined();
-    expect(ADMIN_URL).toBe('https://puntos-club-admin.vercel.app');
+    expect(ADMIN_URL).toBe('https://www.puntosclub.com.ar');
   });
 
   it('el build falla de entrada si falta Supabase, en vez de romper en runtime', async () => {

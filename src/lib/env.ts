@@ -24,4 +24,4 @@ export const env = envSchema.parse({
 // nada": el mail se manda igual y sin base sale un `undefined/auth/...` que no
 // abre nada. Sale de `env` y no de process.env para no saltearse la validacion.
 export const ADMIN_URL =
-  env.NEXT_PUBLIC_SITE_URL ?? 'https://puntos-club-admin.vercel.app';
+  env.NEXT_PUBLIC_SITE_URL ?? 'https://www.puntosclub.com.ar';
