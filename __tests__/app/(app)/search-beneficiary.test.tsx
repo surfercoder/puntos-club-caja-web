@@ -39,7 +39,7 @@ beforeEach(() => {
 
 describe('busqueda por email', () => {
   it('encuentra al cliente y va a la ficha pasando solo el id', async () => {
-    db.queue({ data: { id: 7 }, error: null });
+    db.queue({ data: [{ id: 7 }], error: null });
     renderApp(<SearchBeneficiaryPage />);
 
     await userEvent.type(field(), 'cliente@ejemplo.com');
@@ -49,18 +49,23 @@ describe('busqueda por email', () => {
       expect(replace).toHaveBeenCalledWith('/scanned-user?beneficiaryId=7'),
     );
     expect(replace.mock.calls[0][0]).not.toContain('@');
-    expect(db.tables).toEqual(['beneficiary']);
+    expect(db.tables).toEqual([]);
+    expect(db.client.rpc).toHaveBeenCalledWith('cashier_find_beneficiary', {
+      p_email: 'cliente@ejemplo.com',
+      p_document_id: null,
+      p_id: null,
+    });
   });
 
   it('se puede mandar con Enter', async () => {
-    db.queue({ data: { id: 7 }, error: null });
+    db.queue({ data: [{ id: 7 }], error: null });
     renderApp(<SearchBeneficiaryPage />);
     await userEvent.type(field(), 'cliente@ejemplo.com{Enter}');
     await waitFor(() => expect(replace).toHaveBeenCalled());
   });
 
   it('avisa si no lo encuentra', async () => {
-    db.queue({ data: null, error: { code: 'PGRST116' } });
+    db.queue({ data: [], error: null });
     renderApp(<SearchBeneficiaryPage />);
 
     await userEvent.type(field(), 'nadie@ejemplo.com');
@@ -86,7 +91,7 @@ describe('busqueda por email', () => {
 
 describe('busqueda por DNI', () => {
   it('cambia de modo y busca por documento', async () => {
-    db.queue({ data: { id: 7 }, error: null });
+    db.queue({ data: [{ id: 7 }], error: null });
     renderApp(<SearchBeneficiaryPage />);
 
     await userEvent.click(screen.getByRole('button', { name: es('search.modeDni') }));
@@ -96,10 +101,15 @@ describe('busqueda por DNI', () => {
     await waitFor(() =>
       expect(replace).toHaveBeenCalledWith('/scanned-user?beneficiaryId=7'),
     );
+    expect(db.client.rpc).toHaveBeenCalledWith('cashier_find_beneficiary', {
+      p_email: null,
+      p_document_id: '30111222',
+      p_id: null,
+    });
   });
 
   it('avisa con el texto de DNI cuando no lo encuentra', async () => {
-    db.queue({ data: null, error: { code: 'PGRST116' } });
+    db.queue({ data: [], error: null });
     renderApp(<SearchBeneficiaryPage />);
 
     await userEvent.click(screen.getByRole('button', { name: es('search.modeDni') }));
@@ -124,9 +134,9 @@ describe('busqueda por DNI', () => {
 
 describe('errores', () => {
   it('un fallo de red sale traducido', async () => {
-    db.client.from.mockImplementationOnce(() => {
-      throw new TypeError('Failed to fetch');
-    });
+    db.client.rpc.mockImplementationOnce(() =>
+      Promise.reject(new TypeError('Failed to fetch')),
+    );
     renderApp(<SearchBeneficiaryPage />);
 
     await userEvent.type(field(), 'cliente@ejemplo.com');

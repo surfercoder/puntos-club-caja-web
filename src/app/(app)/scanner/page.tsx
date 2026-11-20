@@ -9,7 +9,7 @@ import { notify } from '@/lib/notify';
 import { Spinner } from '@/components/ui/spinner';
 import { useT } from '@/contexts/I18nContext';
 import { errorMessage } from '@/lib/errors';
-import { supabase } from '@/lib/supabase/client';
+import { findBeneficiary } from '@/lib/beneficiary';
 import { colors } from '@/lib/theme';
 import { cn } from '@/lib/utils';
 
@@ -49,13 +49,14 @@ export default function ScannerPage() {
         return;
       }
 
-      const { data: beneficiary, error: beneficiaryError } = await supabase
-        .from('beneficiary')
-        .select('id')
-        .eq('id', beneficiaryIdInt)
-        .single();
+      // El QR trae id + email: la RPC exige que coincidan los dos, asi no
+      // alcanza con adivinar ids para ver a quien no es socio del club.
+      const beneficiary = await findBeneficiary({
+        id: beneficiaryIdInt,
+        email: typeof qrData.email === 'string' ? qrData.email : undefined,
+      });
 
-      if (beneficiaryError || !beneficiary) {
+      if (!beneficiary) {
         // Sin el id en el mensaje: es un dato interno y no le sirve al cajero.
         fail(t('scanner.userNotFound'));
         return;

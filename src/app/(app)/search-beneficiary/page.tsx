@@ -19,7 +19,7 @@ import { notify } from '@/lib/notify';
 import { Spinner } from '@/components/ui/spinner';
 import { useT } from '@/contexts/I18nContext';
 import { errorMessage } from '@/lib/errors';
-import { supabase } from '@/lib/supabase/client';
+import { findBeneficiary } from '@/lib/beneficiary';
 import { colors } from '@/lib/theme';
 import { cn } from '@/lib/utils';
 
@@ -46,14 +46,11 @@ export default function SearchBeneficiaryPage() {
 
     setLoading(true);
     await (async () => {
-      const query = supabase.from('beneficiary').select('id');
+      const beneficiary = await findBeneficiary(
+        searchMode === 'email' ? { email: trimmed } : { documentId: trimmed },
+      );
 
-      const { data: beneficiary, error: beneficiaryError } =
-        searchMode === 'email'
-          ? await query.ilike('email', trimmed).single()
-          : await query.eq('document_id', trimmed).single();
-
-      if (beneficiaryError || !beneficiary) {
+      if (!beneficiary) {
         notify.error(t('search.notFoundTitle'), {
           description: t(
             searchMode === 'email' ? 'search.notFoundEmail' : 'search.notFoundDni',

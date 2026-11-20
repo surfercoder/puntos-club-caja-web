@@ -51,7 +51,7 @@ beforeEach(() => {
 
 describe('escaneo', () => {
   it('con un QR valido va a la ficha pasando solo el id', async () => {
-    db.queue({ data: { id: 42 }, error: null });
+    db.queue({ data: [{ id: 42 }], error: null });
     renderApp(<ScannerPage />);
 
     await scan({ type: 'beneficiary', id: 42 });
@@ -63,8 +63,20 @@ describe('escaneo', () => {
     expect(replace.mock.calls[0][0]).not.toContain('@');
   });
 
+  it('busca con el id y el email del QR juntos', async () => {
+    db.queue({ data: [{ id: 42 }], error: null });
+    renderApp(<ScannerPage />);
+    await scan({ type: 'beneficiary', id: 42, email: 'cliente@ejemplo.com' });
+    await waitFor(() => expect(replace).toHaveBeenCalled());
+    expect(db.client.rpc).toHaveBeenCalledWith('cashier_find_beneficiary', {
+      p_email: 'cliente@ejemplo.com',
+      p_document_id: null,
+      p_id: 42,
+    });
+  });
+
   it('acepta el id como string', async () => {
-    db.queue({ data: { id: 42 }, error: null });
+    db.queue({ data: [{ id: 42 }], error: null });
     renderApp(<ScannerPage />);
     await scan({ type: 'beneficiary', id: '42' });
     await waitFor(() =>
@@ -101,7 +113,7 @@ describe('escaneo', () => {
   });
 
   it('si el cliente no existe avisa sin filtrar el id interno', async () => {
-    db.queue({ data: null, error: { code: 'PGRST116' } });
+    db.queue({ data: [], error: null });
     renderApp(<ScannerPage />);
     await scan({ type: 'beneficiary', id: 999 });
 
@@ -147,9 +159,9 @@ describe('cerrar', () => {
 
 describe('errores de servidor al buscar el cliente', () => {
   it('un fallo de red sale como problema de conexion, no como "QR ilegible"', async () => {
-    db.client.from.mockImplementationOnce(() => {
-      throw new TypeError('Failed to fetch');
-    });
+    db.client.rpc.mockImplementationOnce(() =>
+      Promise.reject(new TypeError('Failed to fetch')),
+    );
     renderApp(<ScannerPage />);
     await scan({ type: 'beneficiary', id: 42 });
 
@@ -164,7 +176,7 @@ describe('errores de servidor al buscar el cliente', () => {
 
 describe('doble lectura', () => {
   it('el segundo escaneo se ignora mientras el primero esta en curso', async () => {
-    db.queueTable('beneficiary', { data: { id: 42 }, error: null });
+    db.queue({ data: [{ id: 42 }], error: null });
     renderApp(<ScannerPage />);
 
     await scan({ type: 'beneficiary', id: 42 });
