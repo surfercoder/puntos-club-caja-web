@@ -120,14 +120,17 @@ type PendingSale = {
   organizationId: number;
 };
 
+type Receipt = { points: number; amount: number; reference: string };
+
 type State = {
   amount: string;
   loading: boolean;
   calculating: boolean;
   breakdown: PointsBreakdownRow[] | null;
   rateLabel: string;
-  showSuccess: boolean;
-  earnedPoints: number;
+  // Foto de lo que se guardo: si el form cambia con el insert en vuelo, el
+  // exito no lo lee. Igual que en la app Caja.
+  receipt: Receipt | null;
   pending: PendingSale | null;
 };
 
@@ -139,7 +142,7 @@ type Action =
   | { type: 'rate/set'; label: string }
   | { type: 'confirm/open'; pending: PendingSale }
   | { type: 'confirm/close' }
-  | { type: 'success/show'; earnedPoints: number };
+  | { type: 'success/show'; receipt: Receipt };
 
 const initialState: State = {
   amount: '',
@@ -147,8 +150,7 @@ const initialState: State = {
   calculating: false,
   breakdown: null,
   rateLabel: '',
-  showSuccess: false,
-  earnedPoints: 0,
+  receipt: null,
   pending: null,
 };
 
@@ -171,8 +173,7 @@ function reducer(state: State, action: Action): State {
     case 'success/show':
       return {
         ...state,
-        showSuccess: true,
-        earnedPoints: action.earnedPoints,
+        receipt: action.receipt,
         loading: false,
         pending: null,
       };
@@ -393,7 +394,7 @@ function SaleSuccess({
 }: {
   beneficiaryName: string;
   earnedPoints: number;
-  amount: string;
+  amount: number;
   reference: string;
   t: Translate;
 }) {
@@ -423,7 +424,7 @@ function SaleSuccess({
               {t('sale.detailAmount')}
             </span>
             <span className="text-[18px] font-semibold text-ink">
-              ${parseFloat(amount).toFixed(2)}
+              ${amount.toFixed(2)}
             </span>
           </div>
           {reference ? (
@@ -627,7 +628,12 @@ function useSaleSubmission({
   dispatch: React.Dispatch<Action>;
   t: Translate;
 }) {
+  // Mismo problema que `confirming`: dos clicks antes del render piden dos
+  // cotizaciones y el segundo confirm/open pisa el loading del insert.
+  const submitting = useRef(false);
+
   const handleSubmit = async () => {
+    if (submitting.current) return;
     if (!amount || parseFloat(amount) <= 0) {
       notify.error(t('common.error'), { description: t('sale.invalidAmount') });
       return;
@@ -645,11 +651,13 @@ function useSaleSubmission({
     dispatch({ type: 'loading/set', loading: true });
     const purchaseAmount = parseFloat(amount);
 
+    submitting.current = true;
     const quote = await quoteFor(
       purchaseAmount,
       appUser.organization_id,
       appUser.branch_id,
     );
+    submitting.current = false;
 
     if (!quote) {
       notify.error(t('common.error'), { description: t('sale.registerFailed') });
@@ -682,6 +690,7 @@ function useSaleSubmission({
     if (confirming.current) return;
     confirming.current = true;
     dispatch({ type: 'loading/set', loading: true });
+    const externalReference = reference || null;
 
     const { error: purchaseError } = await supabase.from('purchase').insert({
       beneficiary_id: sale.beneficiaryId,
@@ -691,7 +700,7 @@ function useSaleSubmission({
       total_amount: sale.amount,
       points_earned: sale.points,
       notes: t('sale.note'),
-      external_reference: reference || null,
+      external_reference: externalReference,
     });
     confirming.current = false;
 
@@ -711,7 +720,10 @@ function useSaleSubmission({
       return;
     }
 
-    dispatch({ type: 'success/show', earnedPoints: sale.points });
+    dispatch({
+      type: 'success/show',
+      receipt: { points: sale.points, amount: sale.amount, reference: externalReference ?? '' },
+    });
 
     notifyAdmin('/api/purchase/notify', {
       beneficiaryId: sale.beneficiaryId,
@@ -776,16 +788,13 @@ function NewSaleScreen() {
   const t = useT();
   const [state, dispatch] = useReducer(reducer, initialState);
   const [reference, setReference] = useState('');
-  // Una sola vez: es lo que se guarda y lo que se muestra en el exito.
-  const trimmedReference = reference.trim();
   const {
     amount,
     loading,
     calculating,
     breakdown,
     rateLabel,
-    showSuccess,
-    earnedPoints,
+    receipt,
     pending,
   } = state;
 
@@ -811,20 +820,20 @@ function NewSaleScreen() {
   // NewSaleScreen no acumule el flujo entero ademas del render.
   const { handleSubmit, handleConfirm } = useSaleSubmission({
     amount,
-    reference: trimmedReference,
+    reference: reference.trim(),
     beneficiaryId,
     appUser,
     dispatch,
     t,
   });
 
-  if (showSuccess) {
+  if (receipt) {
     return (
       <SaleSuccess
         beneficiaryName={beneficiaryName}
-        earnedPoints={earnedPoints}
-        amount={amount}
-        reference={trimmedReference}
+        earnedPoints={receipt.points}
+        amount={receipt.amount}
+        reference={receipt.reference}
         t={t}
       />
     );

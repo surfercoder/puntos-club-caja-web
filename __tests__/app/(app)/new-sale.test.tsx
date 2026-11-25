@@ -553,6 +553,22 @@ describe('ultimos bordes', () => {
     expect(screen.queryByText('Agustin Cassani')).not.toBeInTheDocument();
   });
 
+  it('dos clicks seguidos en Registrar piden una sola cotizacion', async () => {
+    renderApp(<NewSalePage />);
+    await ready();
+    await userEvent.type(amountField(), '100');
+    await waitFor(() => expect(db.client.rpc).toHaveBeenCalled());
+    db.client.rpc.mockClear();
+
+    await act(async () => {
+      fireEvent.click(submit());
+      fireEvent.click(submit());
+    });
+
+    await screen.findByText(es('sale.confirmTitle'));
+    expect(db.client.rpc).toHaveBeenCalledTimes(1);
+  });
+
   it('dos clicks simultaneos en confirmar insertan una sola compra', async () => {
     db.queueTable('purchase', { data: null, error: null });
     renderApp(<NewSalePage />);
