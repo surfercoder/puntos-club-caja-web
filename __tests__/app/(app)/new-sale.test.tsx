@@ -177,6 +177,37 @@ describe('registrar', () => {
     );
   });
 
+  // Lo que se le pasa al insert de `purchase`: el mock devuelve una cadena nueva
+  // por cada from(), asi que se busca la de esa tabla.
+  const purchaseInsert = () => {
+    const i = db.client.from.mock.calls.findIndex(([tabla]) => tabla === 'purchase');
+    const chain = db.client.from.mock.results[i].value as { insert: jest.Mock };
+    return chain.insert.mock.calls[0][0];
+  };
+
+  it('sin comprobante la compra se guarda con external_reference null', async () => {
+    db.queueTable('purchase', { data: null, error: null });
+    await cargarMonto('100');
+    await userEvent.click(submit());
+    await userEvent.click(await screen.findByRole('button', { name: es('sale.confirmAction') }));
+
+    await screen.findByText(es('sale.successTitle'));
+    expect(purchaseInsert()).toEqual(expect.objectContaining({ external_reference: null }));
+    expect(screen.queryByText(es('sale.referenceDetail'))).not.toBeInTheDocument();
+  });
+
+  it('el nro. de comprobante se guarda sin espacios y se ve en el exito', async () => {
+    db.queueTable('purchase', { data: null, error: null });
+    await cargarMonto('100');
+    await userEvent.type(screen.getByLabelText(es('sale.referenceLabel')), '  TKT-123 ');
+    await userEvent.click(submit());
+    await userEvent.click(await screen.findByRole('button', { name: es('sale.confirmAction') }));
+
+    await screen.findByText(es('sale.successTitle'));
+    expect(purchaseInsert()).toEqual(expect.objectContaining({ external_reference: 'TKT-123' }));
+    expect(screen.getByText('TKT-123')).toBeInTheDocument();
+  });
+
   it('cancelar en el dialogo vuelve al formulario sin guardar', async () => {
     await cargarMonto('100');
     await userEvent.click(submit());

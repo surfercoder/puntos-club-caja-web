@@ -388,11 +388,13 @@ function SaleSuccess({
   beneficiaryName,
   earnedPoints,
   amount,
+  reference,
   t,
 }: {
   beneficiaryName: string;
   earnedPoints: number;
   amount: string;
+  reference: string;
   t: Translate;
 }) {
   const router = useRouter();
@@ -424,6 +426,16 @@ function SaleSuccess({
               ${parseFloat(amount).toFixed(2)}
             </span>
           </div>
+          {reference ? (
+            <div className="mt-3 flex items-center justify-between gap-3">
+              <span className="text-[14px] text-muted">
+                {t('sale.referenceDetail')}
+              </span>
+              <span className="truncate text-[18px] font-semibold text-ink">
+                {reference}
+              </span>
+            </div>
+          ) : null}
         </div>
 
         <div className="flex w-full flex-col gap-3">
@@ -491,6 +503,36 @@ function AmountField({
           <span className="text-[13px] text-muted">{t('sale.amountHint')}</span>
         </div>
       </div>
+  );
+}
+
+// Nro. de transaccion/comprobante del comercio, opcional: lo piden para
+// conciliar las ventas de Puntos Club contra su propio sistema.
+function ReferenceField({
+  value,
+  onChange,
+  t,
+}: {
+  value: string;
+  onChange: (next: string) => void;
+  t: Translate;
+}) {
+  return (
+    <div className={cn('mb-5 rounded-2xl bg-card p-5', CARD_SHADOW)}>
+      <label htmlFor="reference" className="mb-3 block text-[14px] text-muted">
+        {t('sale.referenceLabel')}
+      </label>
+      <input
+        id="reference"
+        type="text"
+        maxLength={100}
+        autoComplete="off"
+        className="w-full bg-transparent p-0 text-[18px] text-ink caret-green-card outline-none placeholder:text-muted"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={t('sale.referencePlaceholder')}
+      />
+    </div>
   );
 }
 
@@ -572,12 +614,14 @@ function useBeneficiaryCard(
 
 function useSaleSubmission({
   amount,
+  reference,
   beneficiaryId,
   appUser,
   dispatch,
   t,
 }: {
   amount: string;
+  reference: string;
   beneficiaryId: string;
   appUser: AppUserWithOrg | null;
   dispatch: React.Dispatch<Action>;
@@ -647,6 +691,7 @@ function useSaleSubmission({
       total_amount: sale.amount,
       points_earned: sale.points,
       notes: t('sale.note'),
+      external_reference: reference.trim() || null,
     });
     confirming.current = false;
 
@@ -730,6 +775,7 @@ function NewSaleScreen() {
   const { appUser } = useAuth();
   const t = useT();
   const [state, dispatch] = useReducer(reducer, initialState);
+  const [reference, setReference] = useState('');
   const {
     amount,
     loading,
@@ -763,6 +809,7 @@ function NewSaleScreen() {
   // NewSaleScreen no acumule el flujo entero ademas del render.
   const { handleSubmit, handleConfirm } = useSaleSubmission({
     amount,
+    reference,
     beneficiaryId,
     appUser,
     dispatch,
@@ -775,6 +822,7 @@ function NewSaleScreen() {
         beneficiaryName={beneficiaryName}
         earnedPoints={earnedPoints}
         amount={amount}
+        reference={reference.trim()}
         t={t}
       />
     );
@@ -819,6 +867,8 @@ function NewSaleScreen() {
           onChange={(next) => dispatch({ type: 'amount/set', amount: next })}
           t={t}
         />
+
+        <ReferenceField value={reference} onChange={setReference} t={t} />
 
         <PointsPreview
           breakdown={breakdown}
