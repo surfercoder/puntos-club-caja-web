@@ -691,7 +691,7 @@ function useSaleSubmission({
       total_amount: sale.amount,
       points_earned: sale.points,
       notes: t('sale.note'),
-      external_reference: reference.trim() || null,
+      external_reference: reference || null,
     });
     confirming.current = false;
 
@@ -776,6 +776,8 @@ function NewSaleScreen() {
   const t = useT();
   const [state, dispatch] = useReducer(reducer, initialState);
   const [reference, setReference] = useState('');
+  // Una sola vez: es lo que se guarda y lo que se muestra en el exito.
+  const trimmedReference = reference.trim();
   const {
     amount,
     loading,
@@ -809,7 +811,7 @@ function NewSaleScreen() {
   // NewSaleScreen no acumule el flujo entero ademas del render.
   const { handleSubmit, handleConfirm } = useSaleSubmission({
     amount,
-    reference,
+    reference: trimmedReference,
     beneficiaryId,
     appUser,
     dispatch,
@@ -822,7 +824,7 @@ function NewSaleScreen() {
         beneficiaryName={beneficiaryName}
         earnedPoints={earnedPoints}
         amount={amount}
-        reference={reference.trim()}
+        reference={trimmedReference}
         t={t}
       />
     );
