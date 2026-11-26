@@ -257,6 +257,8 @@ export const en: Record<keyof typeof es, string> = {
   'sale.invalidAmount': 'Please enter a valid amount.',
   'sale.missingData': 'Some details are missing. Scan the customer again.',
   'sale.registerFailed': "We couldn't record the sale. Please try again.",
+  'sale.confirmTimeout':
+    'The sale took too long to confirm. Tap "{action}" again: if it was already saved, it won\'t be duplicated.',
   'sale.confirmTitle': 'Confirm the award',
   'sale.confirmLead': "You're about to award",
   'sale.confirmUnitOne': 'point to {name}',

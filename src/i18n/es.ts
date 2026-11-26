@@ -258,6 +258,8 @@ export const es = {
   'sale.invalidAmount': 'Por favor ingresá un monto válido.',
   'sale.missingData': 'Faltan datos. Escaneá al cliente nuevamente.',
   'sale.registerFailed': 'No pudimos registrar la venta. Intentá nuevamente.',
+  'sale.confirmTimeout':
+    'La venta tardó demasiado en confirmarse. Tocá "{action}" de nuevo: si ya se había guardado, no se va a duplicar.',
   'sale.confirmTitle': 'Confirmá la asignación',
   'sale.confirmLead': 'Estás por asignar',
   'sale.confirmUnitOne': 'punto a {name}',

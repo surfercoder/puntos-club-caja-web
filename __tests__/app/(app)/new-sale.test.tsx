@@ -208,6 +208,161 @@ describe('registrar', () => {
     expect(screen.getByText('TKT-123')).toBeInTheDocument();
   });
 
+  // --- Idempotencia y timeout del insert (igual que la app Caja) ------------
+  const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+
+  it('cada venta manda una clave de idempotencia UUID', async () => {
+    db.queueTable('purchase', { data: null, error: null });
+    await cargarMonto('100');
+    await userEvent.click(submit());
+    await userEvent.click(await screen.findByRole('button', { name: es('sale.confirmAction') }));
+
+    await screen.findByText(es('sale.successTitle'));
+    expect(purchaseInsert().client_request_id).toMatch(UUID);
+  });
+
+  it('si el insert no contesta en 15s avisa, deja el dialogo y reintenta con la misma clave', async () => {
+    const hungInsert = jest.fn(() => new Promise(() => {}));
+    await cargarMonto('100');
+    await userEvent.click(submit());
+    const confirmar = await screen.findByRole('button', { name: es('sale.confirmAction') });
+
+    db.client.from.mockImplementationOnce(() => ({ insert: hungInsert }) as never);
+    jest.useFakeTimers();
+    try {
+      await act(async () => { fireEvent.click(confirmar); });
+      await act(async () => { jest.advanceTimersByTime(15_000); });
+    } finally {
+      jest.useRealTimers();
+    }
+    expect(notify.error).toHaveBeenCalledWith(
+      es('common.error'),
+      expect.objectContaining({
+        description: es('sale.confirmTimeout').replace('{action}', es('sale.confirmAction')),
+      }),
+    );
+    expect(screen.getByText(es('sale.confirmTitle'))).toBeInTheDocument();
+
+    // El reintento: el primer intento ya se habia guardado, el unique lo frena.
+    db.queueTable('purchase', {
+      data: null,
+      error: { code: '23505', message: 'duplicate key value violates unique constraint "purchase_client_request_id_key"' },
+    });
+    await userEvent.click(screen.getByRole('button', { name: es('sale.confirmAction') }));
+    await screen.findByText(es('sale.successTitle'));
+    const firstKey = (hungInsert.mock.calls[0] as unknown[])[0] as { client_request_id: string };
+    const lastPurchase = db.client.from.mock.calls.map(([tabla]) => tabla).lastIndexOf('purchase');
+    const retry = db.client.from.mock.results[lastPurchase].value as { insert: jest.Mock };
+    expect(retry.insert).not.toBe(hungInsert);
+    expect(retry.insert.mock.calls[0][0].client_request_id).toBe(firstKey.client_request_id);
+  });
+
+  // Despues de un timeout el cajero cancela y vuelve a cargar: la misma venta
+  // reusa la clave (puede estar guardada); otra venta saca una nueva.
+  const timeoutThenCancel = async () => {
+    const hungInsert = jest.fn(() => new Promise(() => {}));
+    await cargarMonto('100');
+    await userEvent.click(submit());
+    const confirmar = await screen.findByRole('button', { name: es('sale.confirmAction') });
+    db.client.from.mockImplementationOnce(() => ({ insert: hungInsert }) as never);
+    jest.useFakeTimers();
+    try {
+      await act(async () => { fireEvent.click(confirmar); });
+      await act(async () => { jest.advanceTimersByTime(15_000); });
+    } finally {
+      jest.useRealTimers();
+    }
+    await userEvent.click(screen.getByRole('button', { name: es('sale.confirmCancel') }));
+    const first = (hungInsert.mock.calls[0] as unknown[])[0] as { client_request_id: string };
+    return first.client_request_id;
+  };
+
+  const lastInsertKey = () => {
+    const i = db.client.from.mock.calls.map(([tabla]) => tabla).lastIndexOf('purchase');
+    const chain = db.client.from.mock.results[i].value as { insert: jest.Mock };
+    return chain.insert.mock.calls[0][0].client_request_id as string;
+  };
+
+  it('si cancela tras un timeout y recarga la misma venta, reusa la clave', async () => {
+    const firstKey = await timeoutThenCancel();
+    db.queueTable('purchase', { data: null, error: null });
+    await userEvent.click(submit());
+    await userEvent.click(await screen.findByRole('button', { name: es('sale.confirmAction') }));
+
+    await screen.findByText(es('sale.successTitle'));
+    expect(lastInsertKey()).toBe(firstKey);
+  });
+
+  it('si tras un timeout carga otra venta, saca una clave nueva', async () => {
+    const firstKey = await timeoutThenCancel();
+    db.queueTable('purchase', { data: null, error: null });
+    await userEvent.clear(amountField());
+    await userEvent.type(amountField(), '250');
+    await waitFor(() => expect(submit()).toBeEnabled());
+    await userEvent.click(submit());
+    await userEvent.click(await screen.findByRole('button', { name: es('sale.confirmAction') }));
+
+    await screen.findByText(es('sale.successTitle'));
+    expect(lastInsertKey()).toMatch(UUID);
+    expect(lastInsertKey()).not.toBe(firstKey);
+  });
+
+  it('tras un timeout, otra referencia es otra venta y el recibo muestra la guardada', async () => {
+    const firstKey = await timeoutThenCancel();
+    db.queueTable('purchase', { data: null, error: null });
+    await userEvent.type(screen.getByLabelText(es('sale.referenceLabel')), 'TKT-B');
+    await userEvent.click(submit());
+    await userEvent.click(await screen.findByRole('button', { name: es('sale.confirmAction') }));
+
+    await screen.findByText(es('sale.successTitle'));
+    expect(lastInsertKey()).not.toBe(firstKey);
+    expect(screen.getByText('TKT-B')).toBeInTheDocument();
+  });
+
+  it('tras un timeout, si la regla cambio reabre la venta vencida con sus puntos', async () => {
+    const firstKey = await timeoutThenCancel();
+    db.client.rpc.mockResolvedValue({ data: breakdown(300), error: null } as never);
+    db.queueTable('purchase', { data: null, error: null });
+    await userEvent.click(submit());
+    await userEvent.click(await screen.findByRole('button', { name: es('sale.confirmAction') }));
+
+    await screen.findByText(es('sale.successTitle'));
+    expect(lastInsertKey()).toBe(firstKey);
+    const i = db.client.from.mock.calls.map(([tabla]) => tabla).lastIndexOf('purchase');
+    const chain = db.client.from.mock.results[i].value as { insert: jest.Mock };
+    expect(chain.insert.mock.calls[0][0].points_earned).toBe(100);
+  });
+
+  it('tras un timeout, un reintento con error no suelta la clave', async () => {
+    const firstKey = await timeoutThenCancel();
+    db.queueTable('purchase', { data: null, error: { code: '500', message: 'boom' } });
+    await userEvent.click(submit());
+    await userEvent.click(await screen.findByRole('button', { name: es('sale.confirmAction') }));
+    await waitFor(() =>
+      expect(screen.queryByText(es('sale.confirmTitle'))).not.toBeInTheDocument(),
+    );
+
+    db.queueTable('purchase', { data: null, error: null });
+    await userEvent.click(submit());
+    await userEvent.click(await screen.findByRole('button', { name: es('sale.confirmAction') }));
+    await screen.findByText(es('sale.successTitle'));
+    expect(lastInsertKey()).toBe(firstKey);
+  });
+
+  it('un 23505 de otra restriccion sigue siendo un error', async () => {
+    db.queueTable('purchase', { data: null, error: { code: '23505', message: 'purchase_number_key' } });
+    await cargarMonto('100');
+    await userEvent.click(submit());
+    await userEvent.click(await screen.findByRole('button', { name: es('sale.confirmAction') }));
+
+    await waitFor(() =>
+      expect(notify.error).toHaveBeenCalledWith(
+        es('common.error'),
+        expect.objectContaining({ description: es('sale.registerFailed') }),
+      ),
+    );
+  });
+
   it('cancelar en el dialogo vuelve al formulario sin guardar', async () => {
     await cargarMonto('100');
     await userEvent.click(submit());

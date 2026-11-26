@@ -111,9 +111,13 @@ async function quoteFor(
 // insertar tal cual. Los puntos que se guardan son estos mismos, no un
 // recalculo, asi que lo que el cajero confirma es exactamente lo que se asigna.
 type PendingSale = {
+  // Clave de idempotencia: la misma en cada reintento de esta venta.
+  requestId: string;
   points: number;
   breakdown: PointsBreakdownRow[];
   amount: number;
+  // Se fija al abrir el dialogo: es la que se guarda y la que muestra el recibo.
+  reference: string | null;
   branchId: number | null;
   beneficiaryId: number;
   cashierId: number;
@@ -383,6 +387,49 @@ function ConfirmModal({
   );
 }
 
+// Tiempo maximo para confirmar el insert de la venta: lo habitual para una
+// escritura en red movil. Pasado eso no se sabe si se guardo, asi que se
+// reintenta con la misma clave y el unique de client_request_id evita el doble.
+// Igual que en la app Caja.
+const INSERT_TIMEOUT_MS = 15_000;
+
+type InsertResult = { error: { code?: string; message?: string } | null } | 'timeout';
+
+// El insert con tope de tiempo. Un 23505 sobre client_request_id es que un
+// intento anterior de ESTA venta ya se guardo: para el cajero es un exito.
+async function insertPurchase(row: Record<string, unknown>): Promise<InsertResult> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<'timeout'>((resolve) => {
+    timer = setTimeout(() => resolve('timeout'), INSERT_TIMEOUT_MS);
+  });
+  const result = await Promise.race([
+    Promise.resolve(supabase.from('purchase').insert(row)),
+    timeout,
+  ]);
+  clearTimeout(timer);
+  if (result === 'timeout') return result;
+  const { error } = result;
+  if (error?.code === '23505' && String(error.message).includes('client_request_id')) {
+    return { error: null };
+  }
+  return { error };
+}
+
+// Que hace "la misma venta" para reusar la clave despues de un timeout. Sin los
+// puntos: si la regla cambio entre intentos sigue siendo la misma venta.
+function saleSignature(
+  sale: Omit<PendingSale, 'requestId' | 'breakdown' | 'points'>,
+): string {
+  return JSON.stringify([
+    sale.amount,
+    sale.reference,
+    sale.branchId,
+    sale.beneficiaryId,
+    sale.cashierId,
+    sale.organizationId,
+  ]);
+}
+
 // Pantalla de venta registrada. Es un render alternativo completo: afuera de
 // NewSaleScreen para que el componente principal no cargue con dos pantallas.
 function SaleSuccess({
@@ -631,6 +678,12 @@ function useSaleSubmission({
   // Mismo problema que `confirming`: dos clicks antes del render piden dos
   // cotizaciones y el segundo confirm/open pisa el loading del insert.
   const submitting = useRef(false);
+  // La ultima venta cuyo insert vencio sin respuesta: puede estar guardada. Si
+  // el cajero cancela y vuelve a cargar la MISMA venta, reusa su clave para que
+  // el unique de client_request_id no la duplique. Se reabre tal cual (clave,
+  // puntos, referencia): es lo que puede haber quedado guardado. Se limpia
+  // solo con un exito; un error del reintento no prueba que el original fallo.
+  const unresolved = useRef<{ signature: string; sale: PendingSale } | null>(null);
 
   const handleSubmit = async () => {
     if (submitting.current) return;
@@ -668,17 +721,23 @@ function useSaleSubmission({
     // Nada se guarda hasta que el cajero ve cuantos puntos son y confirma: el
     // caso que motivo esto fue una regla con multiplicador alto asignando
     // 1.200.000 puntos sin que nadie lo notara.
+    const sale = {
+      points: totalPoints(quote.rows),
+      breakdown: quote.rows,
+      amount: purchaseAmount,
+      reference: reference || null,
+      branchId: quote.branchId,
+      beneficiaryId: parseInt(beneficiaryId),
+      cashierId: parseInt(appUser.id),
+      organizationId: parseInt(appUser.organization_id),
+    };
+    const prev = unresolved.current;
     dispatch({
       type: 'confirm/open',
-      pending: {
-        points: totalPoints(quote.rows),
-        breakdown: quote.rows,
-        amount: purchaseAmount,
-        branchId: quote.branchId,
-        beneficiaryId: parseInt(beneficiaryId),
-        cashierId: parseInt(appUser.id),
-        organizationId: parseInt(appUser.organization_id),
-      },
+      pending:
+        prev?.signature === saleSignature(sale)
+          ? prev.sale
+          : { ...sale, requestId: crypto.randomUUID() },
     });
   };
 
@@ -690,9 +749,9 @@ function useSaleSubmission({
     if (confirming.current) return;
     confirming.current = true;
     dispatch({ type: 'loading/set', loading: true });
-    const externalReference = reference || null;
 
-    const { error: purchaseError } = await supabase.from('purchase').insert({
+    const result = await insertPurchase({
+      client_request_id: sale.requestId,
       beneficiary_id: sale.beneficiaryId,
       cashier_id: sale.cashierId,
       branch_id: sale.branchId,
@@ -700,9 +759,21 @@ function useSaleSubmission({
       total_amount: sale.amount,
       points_earned: sale.points,
       notes: t('sale.note'),
-      external_reference: externalReference,
+      external_reference: sale.reference,
     });
     confirming.current = false;
+
+    if (result === 'timeout') {
+      // No se sabe si se guardo: el modal queda abierto con la misma venta (y
+      // la misma clave) para reintentar sin riesgo de duplicarla.
+      unresolved.current = { signature: saleSignature(sale), sale };
+      notify.error(t('common.error'), {
+        description: t('sale.confirmTimeout', { action: t('sale.confirmAction') }),
+      });
+      dispatch({ type: 'loading/set', loading: false });
+      return;
+    }
+    const purchaseError = result.error;
 
     if (purchaseError) {
       // El trigger check_purchase_membership frena la venta si el cliente dejo
@@ -720,9 +791,10 @@ function useSaleSubmission({
       return;
     }
 
+    unresolved.current = null;
     dispatch({
       type: 'success/show',
-      receipt: { points: sale.points, amount: sale.amount, reference: externalReference ?? '' },
+      receipt: { points: sale.points, amount: sale.amount, reference: sale.reference ?? '' },
     });
 
     notifyAdmin('/api/purchase/notify', {
