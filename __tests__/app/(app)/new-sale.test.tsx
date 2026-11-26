@@ -1,4 +1,4 @@
-import { act, fireEvent, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 
@@ -41,6 +41,7 @@ jest.mock('@/contexts/AuthContext', () => ({
 }));
 
 import NewSalePage from '@/app/(app)/new-sale/page';
+import { UNRESOLVED_TTL_MS, unresolvedSales } from '@/lib/unresolved-sales';
 import { notify as notifyModule } from '@/lib/notify';
 
 const notify = jest.mocked(notifyModule);
@@ -57,6 +58,8 @@ const ready = () => screen.findByText('Agustin Cassani');
 beforeEach(() => {
   jest.clearAllMocks();
   db.reset();
+  // Las ventas sin resolver viven en el modulo: no se arrastran entre tests.
+  unresolvedSales.clear();
   params = new URLSearchParams('beneficiaryId=1');
   appUser = { organization_id: '7', id: '5', branch_id: null };
   card.mockResolvedValue({
@@ -293,6 +296,33 @@ describe('registrar', () => {
     expect(lastInsertKey()).toBe(firstKey);
   });
 
+  it('salir de la pantalla tras un timeout no pierde la clave', async () => {
+    const firstKey = await timeoutThenCancel();
+    cleanup();
+    db.queueTable('purchase', { data: null, error: null });
+    await cargarMonto('100');
+    await userEvent.click(submit());
+    await userEvent.click(await screen.findByRole('button', { name: es('sale.confirmAction') }));
+
+    await screen.findByText(es('sale.successTitle'));
+    expect(lastInsertKey()).toBe(firstKey);
+  });
+
+  it('un rechazo del servidor en el primer intento no deja la venta pendiente', async () => {
+    db.queueTable('purchase', { data: null, error: { code: '23503' } });
+    await cargarMonto('100');
+    await userEvent.click(submit());
+    await userEvent.click(await screen.findByRole('button', { name: es('sale.confirmAction') }));
+    await waitFor(() => expect(notify.error).toHaveBeenCalled());
+    const rejectedKey = lastInsertKey();
+
+    db.queueTable('purchase', { data: null, error: null });
+    await userEvent.click(submit());
+    await userEvent.click(await screen.findByRole('button', { name: es('sale.confirmAction') }));
+    await screen.findByText(es('sale.successTitle'));
+    expect(lastInsertKey()).not.toBe(rejectedKey);
+  });
+
   it('si tras un timeout carga otra venta, saca una clave nueva', async () => {
     const firstKey = await timeoutThenCancel();
     db.queueTable('purchase', { data: null, error: null });
@@ -347,6 +377,41 @@ describe('registrar', () => {
     await userEvent.click(await screen.findByRole('button', { name: es('sale.confirmAction') }));
     await screen.findByText(es('sale.successTitle'));
     expect(lastInsertKey()).toBe(firstKey);
+  });
+
+  it('con el modal abierto mas de 5 minutos tras un timeout, un rechazo no suelta la clave', async () => {
+    const hungInsert = jest.fn(() => new Promise(() => {}));
+    await cargarMonto('100');
+    await userEvent.click(submit());
+    const confirmar = await screen.findByRole('button', { name: es('sale.confirmAction') });
+    db.client.from.mockImplementationOnce(() => ({ insert: hungInsert }) as never);
+    jest.useFakeTimers();
+    try {
+      await act(async () => { fireEvent.click(confirmar); });
+      await act(async () => { jest.advanceTimersByTime(15_000); });
+    } finally {
+      jest.useRealTimers();
+    }
+    const firstKey = ((hungInsert.mock.calls[0] as unknown[])[0] as { client_request_id: string })
+      .client_request_id;
+
+    const later = Date.now() + UNRESOLVED_TTL_MS + 1;
+    const clock = jest.spyOn(Date, 'now').mockImplementation(() => later);
+    try {
+      db.queueTable('purchase', { data: null, error: { code: '500', message: 'boom' } });
+      await userEvent.click(screen.getByRole('button', { name: es('sale.confirmAction') }));
+      await waitFor(() =>
+        expect(screen.queryByText(es('sale.confirmTitle'))).not.toBeInTheDocument(),
+      );
+
+      db.queueTable('purchase', { data: null, error: null });
+      await userEvent.click(submit());
+      await userEvent.click(await screen.findByRole('button', { name: es('sale.confirmAction') }));
+      await screen.findByText(es('sale.successTitle'));
+      expect(lastInsertKey()).toBe(firstKey);
+    } finally {
+      clock.mockRestore();
+    }
   });
 
   it('un 23505 de otra restriccion sigue siendo un error', async () => {

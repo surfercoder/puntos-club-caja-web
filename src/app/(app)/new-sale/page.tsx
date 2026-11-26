@@ -36,6 +36,7 @@ import {
   type PointsBreakdownRow,
 } from '@/lib/points-rules';
 import { supabase } from '@/lib/supabase/client';
+import { unresolvedSales, type PendingSale } from '@/lib/unresolved-sales';
 import { colors, formatPoints } from '@/lib/theme';
 import { cn } from '@/lib/utils';
 
@@ -106,23 +107,6 @@ async function quoteFor(
     return null;
   }
 }
-
-// La venta ya calculada y esperando el OK del cajero: es la fila que se va a
-// insertar tal cual. Los puntos que se guardan son estos mismos, no un
-// recalculo, asi que lo que el cajero confirma es exactamente lo que se asigna.
-type PendingSale = {
-  // Clave de idempotencia: la misma en cada reintento de esta venta.
-  requestId: string;
-  points: number;
-  breakdown: PointsBreakdownRow[];
-  amount: number;
-  // Se fija al abrir el dialogo: es la que se guarda y la que muestra el recibo.
-  reference: string | null;
-  branchId: number | null;
-  beneficiaryId: number;
-  cashierId: number;
-  organizationId: number;
-};
 
 type Receipt = { points: number; amount: number; reference: string };
 
@@ -678,12 +662,6 @@ function useSaleSubmission({
   // Mismo problema que `confirming`: dos clicks antes del render piden dos
   // cotizaciones y el segundo confirm/open pisa el loading del insert.
   const submitting = useRef(false);
-  // La ultima venta cuyo insert vencio sin respuesta: puede estar guardada. Si
-  // el cajero cancela y vuelve a cargar la MISMA venta, reusa su clave para que
-  // el unique de client_request_id no la duplique. Se reabre tal cual (clave,
-  // puntos, referencia): es lo que puede haber quedado guardado. Se limpia
-  // solo con un exito; un error del reintento no prueba que el original fallo.
-  const unresolved = useRef<{ signature: string; sale: PendingSale } | null>(null);
 
   const handleSubmit = async () => {
     if (submitting.current) return;
@@ -731,24 +709,27 @@ function useSaleSubmission({
       cashierId: parseInt(appUser.id),
       organizationId: parseInt(appUser.organization_id),
     };
-    const prev = unresolved.current;
     dispatch({
       type: 'confirm/open',
-      pending:
-        prev?.signature === saleSignature(sale)
-          ? prev.sale
-          : { ...sale, requestId: crypto.randomUUID() },
+      pending: unresolvedSales.get(saleSignature(sale)) ?? { ...sale, requestId: crypto.randomUUID() },
     });
   };
 
   // `disabled={loading}` no alcanza: el state recien se aplica en el proximo
   // render, asi que dos clicks seguidos entran los dos e insertan dos compras.
   const confirming = useRef(false);
+  const attemptedKey = useRef<string | null>(null);
 
   const handleConfirm = async (sale: PendingSale) => {
     if (confirming.current) return;
     confirming.current = true;
     dispatch({ type: 'loading/set', loading: true });
+    const signature = saleSignature(sale);
+    // Reintento = la clave ya viajo. El ref cubre un modal abierto mas de 5
+    // minutos tras un timeout: la entrada vencio pero el insert pudo guardarse.
+    const retry = unresolvedSales.has(signature) || attemptedKey.current === sale.requestId;
+    attemptedKey.current = sale.requestId;
+    const attempt = unresolvedSales.set(signature, sale);
 
     const result = await insertPurchase({
       client_request_id: sale.requestId,
@@ -766,7 +747,6 @@ function useSaleSubmission({
     if (result === 'timeout') {
       // No se sabe si se guardo: el modal queda abierto con la misma venta (y
       // la misma clave) para reintentar sin riesgo de duplicarla.
-      unresolved.current = { signature: saleSignature(sale), sale };
       notify.error(t('common.error'), {
         description: t('sale.confirmTimeout', { action: t('sale.confirmAction') }),
       });
@@ -776,6 +756,10 @@ function useSaleSubmission({
     const purchaseError = result.error;
 
     if (purchaseError) {
+      // Un rechazo del servidor (trae code) en el primer intento prueba que no se
+      // guardo. Un error de red, o cualquier error de un reintento (el trigger
+      // corre antes que el unique), no: ahi la venta sigue sin resolver.
+      if (purchaseError.code && !retry) unresolvedSales.delete(signature, attempt);
       // El trigger check_purchase_membership frena la venta si el cliente dejo
       // de seguir al club: hay que volver a sumarlo antes de cargarle puntos.
       // El resto de los fallos no se distinguen para el cajero: reintentar.
@@ -791,7 +775,7 @@ function useSaleSubmission({
       return;
     }
 
-    unresolved.current = null;
+    unresolvedSales.delete(signature, attempt);
     dispatch({
       type: 'success/show',
       receipt: { points: sale.points, amount: sale.amount, reference: sale.reference ?? '' },
